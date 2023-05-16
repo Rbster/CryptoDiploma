@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
+// TODO: Delete
+// import "hardhat/console.sol";
+
 // Uncomment this line to use console.log
 // import "hardhat/console.sol";
 
 contract SmartWallet {
-    uint public unlockTime;
     address payable public owner;
 
     address[] guardians;
@@ -42,28 +44,32 @@ contract SmartWallet {
 
     function setGuardians(address[] calldata newGuardians, uint newNumGuardsReq) external onlyOwner {
         require(newNumGuardsReq > 0, "numGuardsReq must be greater then 0");
-        if (guardians.length != 0) {
-            eraseGuardians();
-        }
+        eraseGuardians();
         numGuardsReq = newNumGuardsReq;
         setGuardians(newGuardians);
     }
 
     function eraseGuardians() internal onlyOwner {
         numGuardsReq = type(uint).max;
-        for (uint i = 0; i < guardians.length; i++) {
-            isGuardian[guardians[i]] = false;
+        if (guardians.length != 0) {
+            for (uint i = 0; i < guardians.length; i++) {
+                isGuardian[guardians[i]] = false;
+            }
+            delete guardians;
+            emit GuardiansErased(block.timestamp);
         }
-        delete guardians;
-        emit GuardiansErased(block.timestamp);
     }
 
     function setGuardians(address[] calldata newGuardians) internal onlyOwner {
         for (uint i = 1; i <= newGuardians.length; i++) {
             guardians.push(newGuardians[newGuardians.length - i]);
-            isGuardian[newGuardians[i]] = true;
+            isGuardian[newGuardians[i - 1]] = true;
         }
         emit GuardiansAssigned(newGuardians, block.timestamp);
+    }
+
+    function testIsGuardian(address someAddress) external view returns (bool) {
+        return isGuardian[someAddress];
     }
 
     // function withdraw() public {

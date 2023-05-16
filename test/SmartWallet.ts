@@ -36,6 +36,32 @@ describe("SmartWallet", function () {
       expect(await smartWallet.owner()).to.equal(owner.address);
     });
 
+  });
+
+  describe("Transfer ownership", function () {
+        it("Should transfer ownership", async function () {
+          const { smartWallet, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+          // console.log("Initial accaunt: %s", owner.address);
+          // console.log("Other accaunt: %s", otherAccount.address);
+          await smartWallet.transferOwnership(otherAccount.address);
+          // console.log(await smartWallet.owner());
+          await expect(await smartWallet.owner()).to.equal(otherAccount.address);
+        });
+  });
+
+  describe("Guardians", function () {
+    it("Should set guardian", async function () {
+      const { smartWallet, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
+      // console.log("Initial accaunt: %s", owner.address);
+      // console.log("Other accaunt: %s", otherAccount.address);
+      await smartWallet.setGuardians([otherAccount.address], 1);
+      const isGuardian = await smartWallet.testIsGuardian(otherAccount.address);
+      // console.log(await smartWallet.owner());
+      await expect(isGuardian).to.equal(true);
+    });
+});
+   
+
   //   it("Should receive and store the funds to lock", async function () {
   //     const { lock, lockedAmount } = await loadFixture(
   //       deployOneYearLockFixture
@@ -120,5 +146,5 @@ describe("SmartWallet", function () {
   //       );
   //     });
   //   });
-  });
+  
 });
