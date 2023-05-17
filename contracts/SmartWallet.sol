@@ -17,8 +17,10 @@ contract SmartWallet is ReentrancyGuard {
     mapping (address => bool) isGuardian;
     uint numGuardsReq;
 
-    
+    address ownerCRTarget;
+    mapping (address => bool) acceptanceCR;
 
+    
     event GuardiansAssigned(address[] guardians, uint when);
     event GuardiansErased(uint when);
     event OwnershipChanged(address from, address to, uint when);
@@ -55,11 +57,7 @@ contract SmartWallet is ReentrancyGuard {
 
 // Only owner
     function transferOwnership(address newOwner) external onlyOwner {
-        numGuardsReq = type(uint).max;
-        eraseGuardians();
-        // address oldOwner = owner;
-        owner = payable(newOwner);
-        // emit OwnershipChanged(oldOwner, owner, block.timestamp);
+        _transferOwnership(newOwner);
     }
 
     function setGuardians(address[] calldata newGuardians, uint newNumGuardsReq) external onlyOwner {
@@ -73,7 +71,7 @@ contract SmartWallet is ReentrancyGuard {
         numGuardsReq = newNumGuardsReq;
     }
 
-    function eraseGuardians() internal onlyOwner {
+    function eraseGuardians() private {
         if (guardians.length != 0) {
             for (uint i = 0; i < guardians.length; i++) {
                 isGuardian[guardians[i]] = false;
@@ -93,19 +91,55 @@ contract SmartWallet is ReentrancyGuard {
         }
     }
 
+    function _transferOwnership(address newOwner) private {
+        numGuardsReq = type(uint).max;
+        eraseGuardians();
+        // address oldOwner = owner;
+        owner = payable(newOwner);
+    }
+
 // Only Guardians
 
+    function submitOwnershipCR(address _to) external onlyGuardian {
+        require(_to != address(0) && !isGuardian[_to], "owner can't be null or guardian");
+        ownerCRTarget = _to;
+    }
 
+    function acceptOwnershipCR() external onlyGuardian {
+        require(ownerCRTarget != address(0), "ownership change request must exist");
+        acceptanceCR[msg.sender] = true;
+    }
 
+    function revokeAcceptionOwnershipCR() external onlyGuardian {
+        require(ownerCRTarget != address(0), "ownership change request must exist");
+        acceptanceCR[msg.sender] = false;
+    }
 
+    function revokeOwnershipCR() external onlyGuardian { 
+        for (uint i = 0; i < guardians.length; i++) {
+            acceptanceCR[guardians[i]] = false;
+        }
+        ownerCRTarget = address(0);
+    }
+
+    function executeOwnershipCR() external onlyGuardian {
+        require(ownerCRTarget != address(0), "ownership change request must exist");
+        uint numGuardsAccepted = 0;
+        for (uint i = 0; i < guardians.length; i++) {
+            if (acceptanceCR[guardians[i]] == true) {
+                numGuardsAccepted++;
+            }
+        }
+        require(numGuardsAccepted >= numGuardsReq, "ownership change request must exist");
+        _transferOwnership(ownerCRTarget);
+        ownerCRTarget = address(0);
+    }
 
 
     function testIsGuardian(address someAddress) external view returns (bool) {
         return isGuardian[someAddress];
     }
-
-    
-    
+        
 // For ERC-20    
     function getBalance(IERC20 tokenAddress) public view returns(uint256) {
        return tokenAddress.balanceOf(address(this));
@@ -123,7 +157,7 @@ contract SmartWallet is ReentrancyGuard {
     function withdraw(uint256 amount) public payable onlyOwner nonReentrant {
         require(amount <= address(this).balance, "Insufficient token balance");
 
-        (bool sent, bytes memory data) = payable(msg.sender).call{value: msg.value}("");
+        (bool sent, ) = payable(msg.sender).call{value: msg.value}("");
         require(sent, "Failed to send Ether");
     }
 
