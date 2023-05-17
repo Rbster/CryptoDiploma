@@ -7,14 +7,17 @@ pragma solidity ^0.8.9;
 // Uncomment this line to use console.log
 // import "hardhat/console.sol";
 
-contract SmartWallet {
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract SmartWallet is ReentrancyGuard {
     address payable public owner;
 
     address[] guardians;
     mapping (address => bool) isGuardian;
     uint numGuardsReq;
 
-
+    
 
     event GuardiansAssigned(address[] guardians, uint when);
     event GuardiansErased(uint when);
@@ -90,8 +93,38 @@ contract SmartWallet {
         }
     }
 
+// Only Guardians
+
+
+
+
+
+
     function testIsGuardian(address someAddress) external view returns (bool) {
         return isGuardian[someAddress];
+    }
+
+    
+    
+// For ERC-20    
+    function getBalance(IERC20 tokenAddress) public view returns(uint256) {
+       return tokenAddress.balanceOf(address(this));
+   }
+
+   function getBalance() public view returns(uint256) {
+       return address(this).balance;
+   }
+   
+   function withdraw(IERC20 tokenAddress, uint256 amount) public nonReentrant {
+        require(amount <= tokenAddress.balanceOf(address(this)), "Insufficient token balance");
+        tokenAddress.transfer(msg.sender, amount);
+    }
+
+    function withdraw(uint256 amount) public payable onlyOwner nonReentrant {
+        require(amount <= address(this).balance, "Insufficient token balance");
+
+        (bool sent, bytes memory data) = payable(msg.sender).call{value: msg.value}("");
+        require(sent, "Failed to send Ether");
     }
 
     // function withdraw() public {
@@ -105,4 +138,11 @@ contract SmartWallet {
 
     //     owner.transfer(address(this).balance);
     // }
+
+// technical to recieve eth
+    // Function to receive Ether. msg.data must be empty
+    receive() external payable {}
+
+    // Fallback function is called when msg.data is not empty
+    fallback() external payable {}
 }
