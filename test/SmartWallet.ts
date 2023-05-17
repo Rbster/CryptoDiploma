@@ -15,12 +15,12 @@ describe("SmartWallet", function () {
     // const unlockTime = (await time.latest()) + ONE_YEAR_IN_SECS;
 
     // Contracts are deployed using the first signer/account by default
-    const [owner, otherAccount] = await ethers.getSigners();
+    const [owner, otherAccount, secondOtherAccount] = await ethers.getSigners();
 
     const Lock = await ethers.getContractFactory("SmartWallet");
     const smartWallet = await Lock.deploy();
 
-    return { smartWallet, owner, otherAccount };
+    return { smartWallet, owner, otherAccount, secondOtherAccount };
   }
 
   describe("Deployment", function () {
@@ -50,14 +50,24 @@ describe("SmartWallet", function () {
   });
 
   describe("Guardians", function () {
-    it("Should set guardian", async function () {
-      const { smartWallet, owner, otherAccount } = await loadFixture(deployOneYearLockFixture);
-      // console.log("Initial accaunt: %s", owner.address);
-      // console.log("Other accaunt: %s", otherAccount.address);
+    async function deployAndSetGuardianFixture() {
+      const { smartWallet, owner, otherAccount, secondOtherAccount } = await loadFixture(deployOneYearLockFixture);
       await smartWallet.setGuardians([otherAccount.address], 1);
+      return { smartWallet, owner, otherAccount, secondOtherAccount };
+    }
+
+    it("Should set guardian", async function () {
+      const { smartWallet, owner, otherAccount } = await loadFixture(deployAndSetGuardianFixture);
       const isGuardian = await smartWallet.testIsGuardian(otherAccount.address);
-      // console.log(await smartWallet.owner());
       await expect(isGuardian).to.equal(true);
+    });
+
+    it("Should erase guardians after transfering ownership", async function () {
+      const { smartWallet, owner, otherAccount, secondOtherAccount } = await loadFixture(deployAndSetGuardianFixture);
+      await smartWallet.transferOwnership(secondOtherAccount.address);
+      const isGuardian = await smartWallet.testIsGuardian(otherAccount.address);
+      await expect(isGuardian).to.equal(false);
+      // console.log(await smartWallet.owner(), " ", secondOtherAccount.address);
     });
 });
    
