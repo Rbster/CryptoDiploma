@@ -7,7 +7,9 @@ async function main() {
   // const lockedAmount = ethers.utils.parseEther("0.001");
 
   const SmartWallet = await ethers.getContractFactory("SmartWallet");
-  const wallet = await SmartWallet.deploy();
+  const wallet = await SmartWallet.deploy(
+    // [], 0
+    );
 
   await wallet.deployed();
 
