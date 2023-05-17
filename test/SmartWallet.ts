@@ -18,22 +18,20 @@ describe("SmartWallet", function () {
     const [owner, otherAccount, secondOtherAccount] = await ethers.getSigners();
 
     const Lock = await ethers.getContractFactory("SmartWallet");
-    const smartWallet = await Lock.deploy();
+    const smartWallet = await Lock.deploy([secondOtherAccount.address], 1);
 
     return { smartWallet, owner, otherAccount, secondOtherAccount };
   }
 
   describe("Deployment", function () {
-    // it("Should set the right unlockTime", async function () {
-    //   const { lock, unlockTime } = await loadFixture(deployOneYearLockFixture);
-
-    //   expect(await lock.unlockTime()).to.equal(unlockTime);
-    // });
-
     it("Should set the right owner", async function () {
       const { smartWallet, owner } = await loadFixture(deployOneYearLockFixture);
-
       expect(await smartWallet.owner()).to.equal(owner.address);
+    });
+
+    it("Should set the guardian in the constructor", async function () {
+      const { smartWallet, owner, otherAccount, secondOtherAccount  } = await loadFixture(deployOneYearLockFixture);
+      expect(await smartWallet.testIsGuardian(secondOtherAccount.address)).to.equal(true);
     });
 
   });

@@ -15,14 +15,30 @@ contract SmartWallet {
     uint numGuardsReq;
 
 
+
     event GuardiansAssigned(address[] guardians, uint when);
     event GuardiansErased(uint when);
     event OwnershipChanged(address from, address to, uint when);
 
-    constructor() payable {
+    constructor(
+        address[] memory newGuardians, 
+        uint newNumGuardsReq
+        
+    ) payable {
+        if (newGuardians.length > 0 && newNumGuardsReq > 0 && newNumGuardsReq <= newGuardians.length) {
+            for (uint i = 0; i < newGuardians.length; i++) {
+                address guardian = newGuardians[i];
+                require(guardian != address(0) && !isGuardian[guardian], "illigal list of guardians");
+                isGuardian[guardian] = true;
+                guardians.push(guardian);
+                
+            }
+            numGuardsReq = newNumGuardsReq;
+        }
         owner = payable(msg.sender);
         numGuardsReq = type(uint).max;
     }
+
 
     modifier onlyOwner() {
         require(msg.sender == owner, "only owner can do that");
@@ -36,36 +52,42 @@ contract SmartWallet {
 
 // Only owner
     function transferOwnership(address newOwner) external onlyOwner {
+        numGuardsReq = type(uint).max;
         eraseGuardians();
-        address oldOwner = owner;
+        // address oldOwner = owner;
         owner = payable(newOwner);
-        emit OwnershipChanged(oldOwner, owner, block.timestamp);
+        // emit OwnershipChanged(oldOwner, owner, block.timestamp);
     }
 
     function setGuardians(address[] calldata newGuardians, uint newNumGuardsReq) external onlyOwner {
-        require(newNumGuardsReq > 0, "numGuardsReq must be greater then 0");
+        require(newGuardians.length > 0, "numGuardsReq must be greater then 0");
+        require(
+            newNumGuardsReq > 0 && newNumGuardsReq <= newGuardians.length,
+            "invalid number of required acceptions"
+        );
         eraseGuardians();
-        numGuardsReq = newNumGuardsReq;
         setGuardians(newGuardians);
+        numGuardsReq = newNumGuardsReq;
     }
 
     function eraseGuardians() internal onlyOwner {
-        numGuardsReq = type(uint).max;
         if (guardians.length != 0) {
             for (uint i = 0; i < guardians.length; i++) {
                 isGuardian[guardians[i]] = false;
             }
             delete guardians;
-            emit GuardiansErased(block.timestamp);
+            // emit GuardiansErased(block.timestamp);
         }
     }
 
     function setGuardians(address[] calldata newGuardians) internal onlyOwner {
         for (uint i = 1; i <= newGuardians.length; i++) {
-            guardians.push(newGuardians[newGuardians.length - i]);
-            isGuardian[newGuardians[i - 1]] = true;
+            address guardian = newGuardians[i - 1];
+            require(guardian != address(0), "invalid guardian");
+            require(!isGuardian[guardian], "guardian not unique");
+            isGuardian[guardian] = true;
+            guardians.push(guardian);
         }
-        emit GuardiansAssigned(newGuardians, block.timestamp);
     }
 
     function testIsGuardian(address someAddress) external view returns (bool) {
