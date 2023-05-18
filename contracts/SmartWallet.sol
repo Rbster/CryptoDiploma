@@ -131,6 +131,7 @@ contract SmartWallet is ReentrancyGuard {
             }
         }
         require(numGuardsAccepted >= numGuardsReq, "ownership change request must exist");
+        
         _transferOwnership(ownerCRTarget);
         ownerCRTarget = address(0);
     }
@@ -159,6 +160,23 @@ contract SmartWallet is ReentrancyGuard {
 
         (bool sent, ) = payable(msg.sender).call{value: msg.value}("");
         require(sent, "Failed to send Ether");
+    }
+
+    function transfer(
+        IERC20 _tokenAddress,
+        address _to,
+        uint _value
+    ) public onlyOwner nonReentrant {
+        bool success = _tokenAddress.transfer(_to, _value);
+        require(success, "tx failed");
+    }
+
+    function transfer(
+        address _to,
+        uint _value
+    ) public onlyOwner nonReentrant {
+        (bool success, ) = _to.call{value: _value}("");
+        require(success, "tx failed");
     }
 
     // function withdraw() public {
